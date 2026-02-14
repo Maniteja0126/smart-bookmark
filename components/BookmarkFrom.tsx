@@ -7,6 +7,8 @@ export default function BookmarkFrom() {
   const [title, setTitle] = useState("");
   const [url, setUrl] = useState("");
   const [loading, setLoading] = useState(false);
+  const [userEditedTitle , setUserEditedTitle ] = useState(false);
+
 
   const normalizeUrl = (u: string) => {
     if (!u.startsWith("http://") && !u.startsWith("https://")) {
@@ -26,7 +28,7 @@ export default function BookmarkFrom() {
   };
 
   useEffect(() => {
-    if(!url || title ) return;
+    if(!url || title|| userEditedTitle ) return;
 
     const t = setTimeout(() => {
       fetchTitle(normalizeUrl(url));
@@ -87,6 +89,7 @@ export default function BookmarkFrom() {
 
     setTitle("");
     setUrl("");
+    setUserEditedTitle(false);
     setLoading(false);
   };
 
@@ -105,7 +108,10 @@ export default function BookmarkFrom() {
       <input
         placeholder="Title (optional)"
         value={title}
-        onChange={e => setTitle(e.target.value)}
+        onChange={e => { 
+          setUserEditedTitle(true);
+          setTitle(e.target.value)}
+        }
         onKeyDown={e => {
           if (e.key === "Enter") add();
         }}
