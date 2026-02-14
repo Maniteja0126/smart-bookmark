@@ -1,36 +1,179 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# Smart Bookmarks
 
-## Getting Started
+A realtime personal bookmark manager built with **Next.js (App Router)** and **Supabase**.
 
-First, run the development server:
+Users can sign in with Google, save bookmarks, and see updates instantly across multiple tabs — without page refresh.
+
+This project was built as part of a take‑home assignment and focuses on correctness, realtime sync, and UX polish.
+
+---
+
+## 🚀 Live Demo
+
+👉 Vercel URL: ""  
+👉 GitHub Repo: ""
+
+---
+
+## ✨ Features
+
+- Google OAuth login (no email/password)
+- Private bookmarks per user (Row Level Security)
+- Add / delete bookmarks
+- Realtime sync across browser tabs
+- Auto-fetch page title from URL
+- Duplicate URL detection
+- Search bookmarks
+- Favicon + domain preview
+- Smart handling of private/auth-gated URLs
+- Polished landing, login, and dashboard UI
+
+---
+
+## 🧱 Tech Stack
+
+- Next.js (App Router)
+- Supabase (Auth, Postgres, Realtime)
+- Tailwind CSS
+- TypeScript
+
+---
+
+## 🛠 Local Setup
+
+```bash
+git clone <repo>
+cd smart-bookmarks
+npm install
+```
+
+Create `.env.local`:
+
+```bash
+NEXT_PUBLIC_SUPABASE_URL=...
+NEXT_PUBLIC_SUPABASE_ANON_KEY=...
+```
+
+Run:
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+---
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+## 📦 Database Schema
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+```sql
+create table bookmarks (
+  id uuid primary key default gen_random_uuid(),
+  user_id uuid references auth.users(id),
+  title text,
+  url text not null,
+  created_at timestamp default now()
+);
 
-## Learn More
+alter table bookmarks enable row level security;
 
-To learn more about Next.js, take a look at the following resources:
+create policy "users can read own bookmarks"
+on bookmarks for select
+using (auth.uid() = user_id);
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+create policy "users can insert own bookmarks"
+on bookmarks for insert
+with check (auth.uid() = user_id);
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+create policy "users can delete own bookmarks"
+on bookmarks for delete
+using (auth.uid() = user_id);
+```
 
-## Deploy on Vercel
+---
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+## 🔥 Key Challenges & How I Solved Them
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+### 1. Realtime not syncing across tabs
+
+**Problem:**  
+Bookmarks updated locally but not in other tabs.
+
+**Cause:**  
+Realtime websocket was connecting anonymously, so RLS blocked events.
+
+**Solution:**  
+
+Explicitly authenticated realtime:
+
+```ts
+supabase.realtime.setAuth(session.access_token);
+```
+
+before subscribing to `postgres_changes`.
+
+Also ensured subscription only happens after session restoration.
+
+---
+
+### 2. Realtime race condition on initial load
+
+**Problem:**  
+Dashboard sometimes showed “No bookmarks” even when data existed.
+
+**Cause:**  
+`onAuthStateChange` does not fire on initial page load if a session already exists.
+
+**Solution:**  
+Explicitly called `getSession()` on mount to:
+
+- authenticate realtime
+- fetch bookmarks immediately
+- then subscribe to realtime
+
+---
+
+### 3. Duplicate fetches after insert
+
+**Problem:**  
+Optimistic UI + realtime caused double refresh.
+
+**Solution:**  
+Removed optimistic updates and relied purely on realtime events once websocket auth was stable.
+
+Now:
+
+- Same tab updates via realtime echo  
+- Other tabs update via websocket  
+
+Single source of truth.
+
+---
+
+### 4. Empty or incorrect titles from modern websites
+
+**Problem:**  
+Some sites don’t expose `<title>` or return “Access Denied”.
+
+**Solution:**  
+Implemented `/api/metadata` endpoint that checks:
+
+- `<title>`
+- `og:title`
+- decodes HTML entities
+
+Also ignored “Access Denied” titles so private URLs remain blank.
+
+---
+
+
+## 💡 UX Improvements
+
+- Auto title fetch while typing URL (debounced)
+- Fallback metadata fetch on submit
+- Search bookmarks
+- Favicon + domain display
+- Empty state
+- Loading states
+- Dark UI polish
+- Keyboard submit (Enter)
+
