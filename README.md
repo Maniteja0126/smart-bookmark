@@ -11,7 +11,7 @@ This project was built as part of a take‑home assignment and focuses on correc
 ## 🚀 Live Demo
 
 👉 Vercel URL: ""  
-👉 GitHub Repo: ""
+👉 GitHub Repo: https://github.com/Maniteja0126/smart-bookmark.git
 
 ---
 
@@ -42,7 +42,7 @@ This project was built as part of a take‑home assignment and focuses on correc
 ## 🛠 Local Setup
 
 ```bash
-git clone <repo>
+git clone https://github.com/Maniteja0126/smart-bookmark.git
 cd smart-bookmarks
 npm install
 ```
